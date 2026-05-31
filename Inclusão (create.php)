@@ -1,0 +1,42 @@
+<?php
+require_once 'config.php';
+session_start(); // <-- ESSENCIAL!
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Sanitização básica
+    $nome = trim($_POST['nome'] ?? '');
+    $cpf = preg_replace('/[^0-9]/', '', $_POST['cpf'] ?? ''); // Remove pontos e traços
+    $telefone = trim($_POST['telefone'] ?? '');
+
+    // Validações
+    if (empty($nome) || empty($cpf) || empty($telefone)) {
+        $_SESSION['msg'] = "Preencha todos os campos!";
+        header('Location: cadastrar.php');
+        exit;
+    }
+
+    // Verificar CPF duplicado
+    $check = $pdo->prepare("SELECT id FROM pacientes WHERE cpf = :cpf");
+    $check->execute([':cpf' => $cpf]);
+    if ($check->fetch()) {
+        $_SESSION['msg'] = "CPF já cadastrado!";
+        header('Location: cadastrar.php');
+        exit;
+    }
+
+    // Inserir com try-catch
+    try {
+        $sql = "INSERT INTO pacientes (nome, cpf, telefone) VALUES (:nome, :cpf, :telefone)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':nome' => $nome, ':cpf' => $cpf, ':telefone' => $telefone]);
+        
+        $_SESSION['msg'] = "Paciente cadastrado com sucesso!";
+        header('Location: listar.php');
+        exit;
+    } catch (PDOException $e) {
+        $_SESSION['msg'] = "Erro ao cadastrar paciente.";
+        header('Location: cadastrar.php');
+        exit;
+    }
+}
+?>
