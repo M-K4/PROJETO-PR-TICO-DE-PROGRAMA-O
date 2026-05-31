@@ -1,0 +1,47 @@
+<?php
+require_once 'config.php';
+session_start(); // <-- ESSENCIAL!
+
+// Valida ID
+$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if ($id <= 0) {
+    $_SESSION['msg'] = "ID inválido!";
+    header('Location: listar.php');
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $telefone = trim($_POST['telefone'] ?? '');
+    
+    // Valida telefone
+    if (empty($telefone)) {
+        $_SESSION['msg'] = "Telefone não pode estar vazio!";
+        header('Location: editar.php?id=' . $id);
+        exit;
+    }
+    
+    // Verifica se paciente existe
+    $check = $pdo->prepare("SELECT id FROM pacientes WHERE id = :id");
+    $check->execute([':id' => $id]);
+    if (!$check->fetch()) {
+        $_SESSION['msg'] = "Paciente não encontrado!";
+        header('Location: listar.php');
+        exit;
+    }
+    
+    // Atualiza com tratamento de erro
+    try {
+        $sql = "UPDATE pacientes SET telefone = :telefone WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':telefone' => $telefone, ':id' => $id]);
+        
+        $_SESSION['msg'] = "Telefone atualizado com sucesso!";
+        header('Location: listar.php');
+        exit;
+    } catch (PDOException $e) {
+        $_SESSION['msg'] = "Erro ao atualizar telefone!";
+        header('Location: editar.php?id=' . $id);
+        exit;
+    }
+}
+?>
